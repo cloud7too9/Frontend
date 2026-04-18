@@ -9,7 +9,10 @@ npm install
 npm run dev          # http://localhost:5173
 npm run build        # Produktions-Build
 npm run test         # Unit-Tests
-npm run typecheck    # TS-Check
+npm run typecheck    # TypeScript-Check
+npm run lint         # ESLint
+npm run format       # Prettier (write)
+npm run check        # typecheck + lint + test
 ```
 
 ## Architektur
@@ -20,4 +23,10 @@ npm run typecheck    # TS-Check
 - `src/shared/` – Wiederverwendbare UI und Tokens
 - `src/tests/` – Unit-Tests
 
-Siehe Plan-Datei für Designregeln (12-Spalten-Grid, feste Größenstufen, getrennter Bearbeitungsmodus).
+## Design-Regeln
+
+1. **12-Spalten-Grid** mit fester Zeilenhöhe (80 px) und definiertem Gap (12 px).
+2. **Feste Größenstufen** (1×1, 2×1, 2×2, 3×2, 4×2, 4×3, 6×3) – keine beliebige Freiform.
+3. **Getrennte Modi**: Normal (stabil, nur Inhalt) und Edit (Drag, Resize, Toolbar).
+
+Neue Paneltypen müssen in `src/features/workspace/model/panel-registry.ts` registriert werden.
