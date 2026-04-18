@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useActivityStore, type ActivityType } from "../../content/activity.store";
 
 const TYPE_LABEL: Record<ActivityType, string> = {
@@ -7,8 +8,8 @@ const TYPE_LABEL: Record<ActivityType, string> = {
   tool: "Tool",
 };
 
-function formatRelative(ts: number): string {
-  const diff = Math.max(0, Date.now() - ts);
+function formatRelative(ts: number, now: number): string {
+  const diff = Math.max(0, now - ts);
   const sec = Math.floor(diff / 1000);
   if (sec < 45) return "gerade eben";
   const min = Math.floor(sec / 60);
@@ -21,6 +22,23 @@ function formatRelative(ts: number): string {
 
 export function LetzteInhaltePanel() {
   const entries = useActivityStore((s) => s.entries);
+  const clear = useActivityStore((s) => s.clear);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") tick();
+    }, 30_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
 
   if (entries.length === 0) {
     return (
@@ -31,23 +49,35 @@ export function LetzteInhaltePanel() {
   }
 
   return (
-    <ul className="flex flex-col gap-1 text-sm">
-      {entries.map((e) => (
-        <li
-          key={e.id}
-          className="flex items-center justify-between gap-2 rounded-md border border-border bg-surface px-2 py-1.5"
+    <div className="flex h-full flex-col gap-2 text-sm">
+      <div className="flex items-center justify-between text-xs text-text-muted">
+        <span>{entries.length} Einträge</span>
+        <button
+          type="button"
+          onClick={clear}
+          className="rounded px-1.5 py-0.5 text-text-muted hover:text-danger focus:outline focus:outline-2 focus:outline-accent"
         >
-          <span className="flex items-center gap-2 truncate">
-            <span className="text-xs uppercase tracking-wide text-text-muted">
-              {TYPE_LABEL[e.type]}
+          Verlauf leeren
+        </button>
+      </div>
+      <ul className="flex flex-col gap-1 overflow-auto">
+        {entries.map((e) => (
+          <li
+            key={e.id}
+            className="flex items-center justify-between gap-2 rounded-md border border-border bg-surface px-2 py-1.5"
+          >
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="text-xs uppercase tracking-wide text-text-muted">
+                {TYPE_LABEL[e.type]}
+              </span>
+              <span className="truncate">{e.label}</span>
             </span>
-            <span className="truncate">{e.label}</span>
-          </span>
-          <span className="whitespace-nowrap text-xs text-text-muted">
-            {formatRelative(e.timestamp)}
-          </span>
-        </li>
-      ))}
-    </ul>
+            <span className="whitespace-nowrap text-xs text-text-muted">
+              {formatRelative(e.timestamp, now)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

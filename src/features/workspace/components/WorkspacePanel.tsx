@@ -127,14 +127,27 @@ export function WorkspacePanel({
             className="flex-1 rounded border border-border bg-surface px-1.5 py-0.5 text-sm focus:border-accent focus:outline-none"
           />
         ) : (
-          <span
-            className="flex-1 truncate"
-            onDoubleClick={() => {
-              if (editMode) setRenaming(true);
-            }}
-            title={editMode ? "Doppelklick zum Umbenennen" : undefined}
-          >
-            {item.titel}
+          <span className="flex min-w-0 flex-1 items-center gap-1.5">
+            <span
+              className="min-w-0 truncate"
+              onDoubleClick={() => {
+                if (editMode) setRenaming(true);
+              }}
+              title={editMode ? "Doppelklick zum Umbenennen" : undefined}
+            >
+              {item.titel}
+            </span>
+            {editMode && (
+              <button
+                type="button"
+                aria-label="Paneltitel umbenennen"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => setRenaming(true)}
+                className="rounded p-0.5 text-xs text-text-muted transition hover:text-text focus:outline focus:outline-2 focus:outline-accent"
+              >
+                ✎
+              </button>
+            )}
           </span>
         )}
         {editMode && !renaming && <PanelToolbar panelId={item.id} />}

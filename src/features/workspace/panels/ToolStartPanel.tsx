@@ -13,9 +13,12 @@ export function ToolStartPanel() {
           target="_blank"
           rel="noreferrer"
           onClick={() => log({ type: "tool", label: `Tool: ${t.label}` })}
-          className="rounded-md border border-border bg-surface px-2 py-2 text-left hover:border-border-strong hover:bg-surface-raised"
+          className="flex items-center gap-2 rounded-md border border-border bg-surface px-2 py-2 text-left hover:border-border-strong hover:bg-surface-raised focus:outline focus:outline-2 focus:outline-accent"
         >
-          {t.label}
+          <span aria-hidden="true" className="text-base">
+            {t.icon}
+          </span>
+          <span className="truncate">{t.label}</span>
         </a>
       ))}
     </div>

@@ -19,6 +19,17 @@ function nextId(): string {
   return `file-${Math.random().toString(36).slice(2, 8)}-${Date.now().toString(36)}`;
 }
 
+export function normalizeUrl(raw: string): string | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    return new URL(withScheme).toString();
+  } catch {
+    return undefined;
+  }
+}
+
 export const useFilesStore = create<FilesState>()(
   persist(
     (set, get) => ({
@@ -26,11 +37,11 @@ export const useFilesStore = create<FilesState>()(
       addFile: (name, url) => {
         const trimmedName = name.trim();
         if (!trimmedName) return;
-        const trimmedUrl = url?.trim() || undefined;
+        const normalizedUrl = url ? normalizeUrl(url) : undefined;
         const entry: FileEntry = {
           id: nextId(),
           name: trimmedName,
-          url: trimmedUrl,
+          url: normalizedUrl,
           addedAt: Date.now(),
         };
         set({ files: [...get().files, entry] });

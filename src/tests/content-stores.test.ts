@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { useNotesStore } from "../features/content/notes.store";
 import { useTasksStore } from "../features/content/tasks.store";
-import { useFilesStore } from "../features/content/files.store";
+import { normalizeUrl, useFilesStore } from "../features/content/files.store";
 import { useActivityStore } from "../features/content/activity.store";
 
 beforeEach(() => {
@@ -91,6 +91,43 @@ describe("files.store", () => {
     const id = useFilesStore.getState().files[0].id;
     useFilesStore.getState().removeFile(id);
     expect(useFilesStore.getState().files.length).toBe(0);
+  });
+});
+
+describe("normalizeUrl", () => {
+  it("prepends https:// when no scheme is given", () => {
+    expect(normalizeUrl("example.com")).toBe("https://example.com/");
+  });
+
+  it("keeps an existing http scheme", () => {
+    expect(normalizeUrl("http://example.com")).toBe("http://example.com/");
+  });
+
+  it("keeps an existing https scheme", () => {
+    expect(normalizeUrl("https://example.com/path")).toBe("https://example.com/path");
+  });
+
+  it("returns undefined for empty input", () => {
+    expect(normalizeUrl("")).toBeUndefined();
+    expect(normalizeUrl("   ")).toBeUndefined();
+  });
+
+  it("returns undefined for invalid urls", () => {
+    expect(normalizeUrl("http://")).toBeUndefined();
+  });
+});
+
+describe("files.store URL handling", () => {
+  it("normalizes URLs before storing", () => {
+    useFilesStore.getState().addFile("doc", "example.com/doc");
+    expect(useFilesStore.getState().files[0].url).toBe("https://example.com/doc");
+  });
+
+  it("drops invalid URLs but keeps the entry", () => {
+    useFilesStore.getState().addFile("doc", "http://");
+    const file = useFilesStore.getState().files[0];
+    expect(file.name).toBe("doc");
+    expect(file.url).toBeUndefined();
   });
 });
 
