@@ -25,6 +25,7 @@ interface WorkspaceState {
 
   moveItem: (id: Id, x: number, y: number) => boolean;
   resizeItem: (id: Id, w: number, h: number) => boolean;
+  renameItem: (id: Id, titel: string) => boolean;
   addItem: (typ: PanelTyp) => void;
   removeItem: (id: Id) => void;
   duplicateItem: (id: Id) => void;
@@ -88,6 +89,19 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     if (candidate.w === target.w && candidate.h === target.h) return false;
     if (hasCollision(candidate, layout.items)) return false;
     const items = layout.items.map((i) => (i.id === id ? candidate : i));
+    set({ layout: { ...layout, items } });
+    saveLayoutToStorage({ ...layout, items });
+    return true;
+  },
+
+  renameItem: (id, titel) => {
+    const trimmed = titel.trim();
+    if (!trimmed) return false;
+    const { layout } = get();
+    const target = layout.items.find((i) => i.id === id);
+    if (!target) return false;
+    if (target.titel === trimmed) return false;
+    const items = layout.items.map((i) => (i.id === id ? { ...i, titel: trimmed } : i));
     set({ layout: { ...layout, items } });
     saveLayoutToStorage({ ...layout, items });
     return true;

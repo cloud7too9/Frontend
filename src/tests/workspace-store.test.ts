@@ -175,6 +175,44 @@ describe("resetLayout", () => {
   });
 });
 
+describe("renameItem", () => {
+  it("updates the title", () => {
+    const ok = useWorkspaceStore.getState().renameItem("panel-aufgaben", "Mein ToDo");
+    expect(ok).toBe(true);
+    const item = useWorkspaceStore
+      .getState()
+      .layout.items.find((i) => i.id === "panel-aufgaben")!;
+    expect(item.titel).toBe("Mein ToDo");
+  });
+
+  it("trims surrounding whitespace", () => {
+    useWorkspaceStore.getState().renameItem("panel-aufgaben", "  Kurz  ");
+    const item = useWorkspaceStore
+      .getState()
+      .layout.items.find((i) => i.id === "panel-aufgaben")!;
+    expect(item.titel).toBe("Kurz");
+  });
+
+  it("rejects an empty title", () => {
+    const ok = useWorkspaceStore.getState().renameItem("panel-aufgaben", "   ");
+    expect(ok).toBe(false);
+    const item = useWorkspaceStore
+      .getState()
+      .layout.items.find((i) => i.id === "panel-aufgaben")!;
+    expect(item.titel).toBe("Aufgaben");
+  });
+
+  it("returns false for an unknown id", () => {
+    const ok = useWorkspaceStore.getState().renameItem("does-not-exist", "Foo");
+    expect(ok).toBe(false);
+  });
+
+  it("is a no-op if the title does not change", () => {
+    const ok = useWorkspaceStore.getState().renameItem("panel-aufgaben", "Aufgaben");
+    expect(ok).toBe(false);
+  });
+});
+
 describe("add-panel overlay", () => {
   it("openAddPanel sets flag true", () => {
     useWorkspaceStore.getState().openAddPanel();

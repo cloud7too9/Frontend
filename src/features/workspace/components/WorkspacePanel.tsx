@@ -1,4 +1,8 @@
-import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useRef, useState } from "react";
+import type {
+  KeyboardEvent as ReactKeyboardEvent,
+  PointerEvent as ReactPointerEvent,
+} from "react";
 import type { LayoutItem } from "../model/workspace.types";
 import type { PixelRect } from "../lib/layout-utils";
 import { stepSize } from "../lib/layout-utils";
@@ -25,8 +29,37 @@ export function WorkspacePanel({
   onResizePointerDown,
 }: Props) {
   const resizeItem = useWorkspaceStore((s) => s.resizeItem);
+  const renameItem = useWorkspaceStore((s) => s.renameItem);
   const def = PANEL_REGISTRY[item.panelTyp];
   const resizable = editMode && def.erlaubtResize;
+
+  const [renaming, setRenaming] = useState(false);
+  const [draft, setDraft] = useState(item.titel);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!editMode) setRenaming(false);
+  }, [editMode]);
+
+  useEffect(() => {
+    if (renaming) {
+      setDraft(item.titel);
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      });
+    }
+  }, [renaming, item.titel]);
+
+  const commitRename = () => {
+    renameItem(item.id, draft);
+    setRenaming(false);
+  };
+
+  const cancelRename = () => {
+    setDraft(item.titel);
+    setRenaming(false);
+  };
 
   const onResizeKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
     const map: Record<string, { dim: "w" | "h"; dir: 1 | -1 }> = {
@@ -66,12 +99,45 @@ export function WorkspacePanel({
       <div
         className={[
           "flex items-center justify-between gap-2 border-b border-border px-3 py-2 text-sm font-medium",
-          editMode ? "cursor-move select-none bg-surface-raised" : "",
+          editMode && !renaming ? "cursor-move select-none bg-surface-raised" : "",
+          editMode && renaming ? "bg-surface-raised" : "",
         ].join(" ")}
-        onPointerDown={editMode ? (e) => onDragPointerDown(e, item.id) : undefined}
+        onPointerDown={
+          editMode && !renaming ? (e) => onDragPointerDown(e, item.id) : undefined
+        }
       >
-        <span className="truncate">{item.titel}</span>
-        {editMode && <PanelToolbar panelId={item.id} />}
+        {renaming ? (
+          <input
+            ref={inputRef}
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commitRename();
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                cancelRename();
+              }
+            }}
+            onBlur={commitRename}
+            onPointerDown={(e) => e.stopPropagation()}
+            aria-label="Paneltitel bearbeiten"
+            className="flex-1 rounded border border-border bg-surface px-1.5 py-0.5 text-sm focus:border-accent focus:outline-none"
+          />
+        ) : (
+          <span
+            className="flex-1 truncate"
+            onDoubleClick={() => {
+              if (editMode) setRenaming(true);
+            }}
+            title={editMode ? "Doppelklick zum Umbenennen" : undefined}
+          >
+            {item.titel}
+          </span>
+        )}
+        {editMode && !renaming && <PanelToolbar panelId={item.id} />}
       </div>
       <div className="flex-1 overflow-auto p-3">
         <PanelContentRenderer typ={item.panelTyp} />
