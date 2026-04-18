@@ -1,6 +1,9 @@
-import type { PointerEvent as ReactPointerEvent } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 import type { LayoutItem } from "../model/workspace.types";
 import type { PixelRect } from "../lib/layout-utils";
+import { stepSize } from "../lib/layout-utils";
+import { PANEL_REGISTRY } from "../model/panel-registry";
+import { useWorkspaceStore } from "../model/workspace.store";
 import { PanelContentRenderer } from "./PanelContentRenderer";
 import { PanelToolbar } from "./PanelToolbar";
 
@@ -21,6 +24,26 @@ export function WorkspacePanel({
   onDragPointerDown,
   onResizePointerDown,
 }: Props) {
+  const resizeItem = useWorkspaceStore((s) => s.resizeItem);
+  const def = PANEL_REGISTRY[item.panelTyp];
+  const resizable = editMode && def.erlaubtResize;
+
+  const onResizeKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    const map: Record<string, { dim: "w" | "h"; dir: 1 | -1 }> = {
+      ArrowRight: { dim: "w", dir: 1 },
+      ArrowLeft: { dim: "w", dir: -1 },
+      ArrowDown: { dim: "h", dir: 1 },
+      ArrowUp: { dim: "h", dir: -1 },
+    };
+    const action = map[e.key];
+    if (!action) return;
+    e.preventDefault();
+    const next = stepSize({ w: item.w, h: item.h }, action.dim, action.dir);
+    if (next.w !== item.w || next.h !== item.h) {
+      resizeItem(item.id, next.w, next.h);
+    }
+  };
+
   return (
     <div
       data-panel-id={item.id}
@@ -53,12 +76,14 @@ export function WorkspacePanel({
       <div className="flex-1 overflow-auto p-3">
         <PanelContentRenderer typ={item.panelTyp} />
       </div>
-      {editMode && (
+      {resizable && (
         <div
-          role="presentation"
-          aria-label="Größe ändern"
+          role="button"
+          aria-label={`Größe ändern (${item.w} mal ${item.h})`}
+          tabIndex={0}
           onPointerDown={(e) => onResizePointerDown(e, item.id)}
-          className="absolute bottom-1 right-1 h-4 w-4 cursor-nwse-resize rounded-sm border border-border-strong bg-surface-raised"
+          onKeyDown={onResizeKeyDown}
+          className="absolute bottom-1 right-1 h-4 w-4 cursor-nwse-resize rounded-sm border border-border-strong bg-surface-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
         />
       )}
     </div>

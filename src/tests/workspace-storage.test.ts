@@ -58,4 +58,53 @@ describe("layout storage", () => {
     clearLayoutStorage();
     expect(loadLayoutFromStorage()).toBeNull();
   });
+
+  it("rejects a layout with non-numeric item coordinates", () => {
+    const poisoned = {
+      ...DEFAULT_LAYOUT,
+      items: DEFAULT_LAYOUT.items.map((i, idx) =>
+        idx === 0 ? { ...i, x: "abc" as unknown as number } : i,
+      ),
+    };
+    localStorage.setItem(
+      "mainhub.workspace.v1",
+      JSON.stringify({ version: 1, layout: poisoned }),
+    );
+    expect(loadLayoutFromStorage()).toBeNull();
+  });
+
+  it("rejects a layout with an unknown panel type", () => {
+    const poisoned = {
+      ...DEFAULT_LAYOUT,
+      items: DEFAULT_LAYOUT.items.map((i, idx) =>
+        idx === 0 ? { ...i, panelTyp: "unknown" as never } : i,
+      ),
+    };
+    localStorage.setItem(
+      "mainhub.workspace.v1",
+      JSON.stringify({ version: 1, layout: poisoned }),
+    );
+    expect(loadLayoutFromStorage()).toBeNull();
+  });
+
+  it("rejects a layout where an item overflows the grid (x+w > spalten)", () => {
+    const poisoned = {
+      ...DEFAULT_LAYOUT,
+      items: [{ ...DEFAULT_LAYOUT.items[0], x: 10, w: 5 }],
+    };
+    localStorage.setItem(
+      "mainhub.workspace.v1",
+      JSON.stringify({ version: 1, layout: poisoned }),
+    );
+    expect(loadLayoutFromStorage()).toBeNull();
+  });
+
+  it("rejects a layout with non-positive grid params", () => {
+    const poisoned = { ...DEFAULT_LAYOUT, zeilenHoehe: 0 };
+    localStorage.setItem(
+      "mainhub.workspace.v1",
+      JSON.stringify({ version: 1, layout: poisoned }),
+    );
+    expect(loadLayoutFromStorage()).toBeNull();
+  });
 });

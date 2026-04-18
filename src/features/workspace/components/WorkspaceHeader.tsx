@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { Button } from "../../../shared/ui/Button";
+import { ConfirmDialog } from "../../../shared/ui/ConfirmDialog";
 import { useWorkspaceStore } from "../model/workspace.store";
 
 export function WorkspaceHeader() {
@@ -8,6 +10,7 @@ export function WorkspaceHeader() {
   const resetLayout = useWorkspaceStore((s) => s.resetLayout);
   const saveLayoutNow = useWorkspaceStore((s) => s.saveLayoutNow);
   const layoutName = useWorkspaceStore((s) => s.layout.name);
+  const [resetOpen, setResetOpen] = useState(false);
 
   return (
     <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface-muted px-4 py-3">
@@ -21,12 +24,7 @@ export function WorkspaceHeader() {
             <Button variant="ghost" onClick={openAddPanel}>
               + Panel hinzufügen
             </Button>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                if (confirm("Layout auf Standard zurücksetzen?")) resetLayout();
-              }}
-            >
+            <Button variant="ghost" onClick={() => setResetOpen(true)}>
               Zurücksetzen
             </Button>
             <Button variant="ghost" onClick={saveLayoutNow}>
@@ -42,6 +40,19 @@ export function WorkspaceHeader() {
           {editMode ? "Fertig" : "Bearbeiten"}
         </Button>
       </div>
+
+      <ConfirmDialog
+        open={resetOpen}
+        title="Layout zurücksetzen?"
+        description="Dein aktueller Workspace wird durch das Standardlayout ersetzt. Diese Aktion lässt sich nicht rückgängig machen."
+        confirmLabel="Zurücksetzen"
+        danger
+        onCancel={() => setResetOpen(false)}
+        onConfirm={() => {
+          resetLayout();
+          setResetOpen(false);
+        }}
+      />
     </header>
   );
 }

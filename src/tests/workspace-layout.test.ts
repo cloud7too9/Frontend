@@ -7,6 +7,7 @@ import {
   pixelToCell,
   rectsOverlap,
   snapSize,
+  stepSize,
 } from "../features/workspace/lib/layout-utils";
 import { hasCollision } from "../features/workspace/lib/collision-utils";
 import type { LayoutItem } from "../features/workspace/model/workspace.types";
@@ -107,6 +108,28 @@ describe("rectsOverlap / hasCollision", () => {
     const a = mkItem({ id: "a", x: 0, y: 0, w: 2, h: 2 });
     const b = mkItem({ id: "b", x: 5, y: 0, w: 2, h: 2 });
     expect(hasCollision(a, [a, b])).toBe(false);
+  });
+});
+
+describe("stepSize", () => {
+  it("returns the current size when no bigger candidate exists (w)", () => {
+    const r = stepSize({ w: 6, h: 3 }, "w", 1);
+    expect(r).toEqual({ w: 6, h: 3 });
+  });
+
+  it("returns the current size when no smaller candidate exists (h)", () => {
+    const r = stepSize({ w: 1, h: 1 }, "h", -1);
+    expect(r).toEqual({ w: 1, h: 1 });
+  });
+
+  it("grows width to the nearest allowed bigger width", () => {
+    const r = stepSize({ w: 2, h: 1 }, "w", 1);
+    expect(r.w).toBeGreaterThan(2);
+  });
+
+  it("shrinks height to the nearest allowed smaller height", () => {
+    const r = stepSize({ w: 4, h: 3 }, "h", -1);
+    expect(r.h).toBeLessThan(3);
   });
 });
 

@@ -51,7 +51,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   setEditMode: (value) => {
     set({ editMode: value, selectedPanelId: value ? get().selectedPanelId : null });
   },
-  toggleEditMode: () => set({ editMode: !get().editMode }),
+  toggleEditMode: () => {
+    get().setEditMode(!get().editMode);
+  },
   selectPanel: (id) => set({ selectedPanelId: id }),
   openAddPanel: () => set({ addPanelOpen: true }),
   closeAddPanel: () => set({ addPanelOpen: false }),

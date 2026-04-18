@@ -74,6 +74,25 @@ export function snapSize(w: number, h: number): AllowedSize {
   return best;
 }
 
+export function stepSize(
+  current: { w: number; h: number },
+  dim: "w" | "h",
+  direction: 1 | -1,
+): AllowedSize {
+  const other: "w" | "h" = dim === "w" ? "h" : "w";
+  const candidates = ALLOWED_SIZES.filter((s) =>
+    direction > 0 ? s[dim] > current[dim] : s[dim] < current[dim],
+  );
+  if (candidates.length === 0) return { w: current.w, h: current.h };
+  candidates.sort((a, b) => {
+    const pa = Math.abs(a[dim] - current[dim]);
+    const pb = Math.abs(b[dim] - current[dim]);
+    if (pa !== pb) return pa - pb;
+    return Math.abs(a[other] - current[other]) - Math.abs(b[other] - current[other]);
+  });
+  return candidates[0];
+}
+
 export function gridRowCount(items: LayoutItem[], minRows = 6): number {
   const max = items.reduce((acc, it) => Math.max(acc, it.y + it.h), 0);
   return Math.max(minRows, max + 2);
