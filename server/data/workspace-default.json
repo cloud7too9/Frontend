@@ -1,0 +1,14 @@
+{
+  "id": "default",
+  "name": "Start",
+  "spalten": 12,
+  "zeilenHoehe": 80,
+  "container": [
+    { "id": "container-schnellnotiz", "toolId": "tool-schnellnotiz", "x": 0, "y": 0, "breite": 3, "hoehe": 2 },
+    { "id": "container-aufgaben", "toolId": "tool-aufgaben", "x": 3, "y": 0, "breite": 3, "hoehe": 2 },
+    { "id": "container-projektstatus", "toolId": "tool-projektstatus", "x": 6, "y": 0, "breite": 4, "hoehe": 2 },
+    { "id": "container-toolstart", "toolId": "tool-toolstart", "x": 10, "y": 0, "breite": 2, "hoehe": 2 },
+    { "id": "container-dateien", "toolId": "tool-dateien", "x": 0, "y": 2, "breite": 4, "hoehe": 2 },
+    { "id": "container-letzteInhalte", "toolId": "tool-letzteInhalte", "x": 4, "y": 2, "breite": 4, "hoehe": 2 }
+  ]
+}

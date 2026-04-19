@@ -1,4 +1,4 @@
-import type { AllowedSize, LayoutItem } from "../model/workspace.types";
+import type { AllowedSize, Container } from "../model/workspace.types";
 import { ALLOWED_SIZES } from "../model/workspace.types";
 
 export interface GridConfig {
@@ -24,15 +24,15 @@ export function columnWidth(config: GridConfig): number {
 export function cellToPixel(
   x: number,
   y: number,
-  w: number,
-  h: number,
+  breite: number,
+  hoehe: number,
   config: GridConfig,
 ): PixelRect {
   const col = columnWidth(config);
   const left = x * (col + config.gap);
   const top = y * (config.rowHeight + config.gap);
-  const width = w * col + (w - 1) * config.gap;
-  const height = h * config.rowHeight + (h - 1) * config.gap;
+  const width = breite * col + (breite - 1) * config.gap;
+  const height = hoehe * config.rowHeight + (hoehe - 1) * config.gap;
   return { left, top, width, height };
 }
 
@@ -54,18 +54,18 @@ export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-export function clampItemToGrid(item: LayoutItem, cols: number): LayoutItem {
-  const w = Math.min(item.w, cols);
-  const x = clamp(item.x, 0, cols - w);
-  const y = Math.max(0, item.y);
-  return { ...item, x, y, w };
+export function clampContainerToGrid(container: Container, cols: number): Container {
+  const breite = Math.min(container.breite, cols);
+  const x = clamp(container.x, 0, cols - breite);
+  const y = Math.max(0, container.y);
+  return { ...container, x, y, breite };
 }
 
-export function snapSize(w: number, h: number): AllowedSize {
+export function snapSize(breite: number, hoehe: number): AllowedSize {
   let best = ALLOWED_SIZES[0];
   let bestDist = Infinity;
   for (const size of ALLOWED_SIZES) {
-    const dist = Math.abs(size.w - w) + Math.abs(size.h - h);
+    const dist = Math.abs(size.breite - breite) + Math.abs(size.hoehe - hoehe);
     if (dist < bestDist) {
       bestDist = dist;
       best = size;
@@ -75,15 +75,15 @@ export function snapSize(w: number, h: number): AllowedSize {
 }
 
 export function stepSize(
-  current: { w: number; h: number },
-  dim: "w" | "h",
+  current: { breite: number; hoehe: number },
+  dim: "breite" | "hoehe",
   direction: 1 | -1,
 ): AllowedSize {
-  const other: "w" | "h" = dim === "w" ? "h" : "w";
+  const other: "breite" | "hoehe" = dim === "breite" ? "hoehe" : "breite";
   const candidates = ALLOWED_SIZES.filter((s) =>
     direction > 0 ? s[dim] > current[dim] : s[dim] < current[dim],
   );
-  if (candidates.length === 0) return { w: current.w, h: current.h };
+  if (candidates.length === 0) return { breite: current.breite, hoehe: current.hoehe };
   candidates.sort((a, b) => {
     const pa = Math.abs(a[dim] - current[dim]);
     const pb = Math.abs(b[dim] - current[dim]);
@@ -93,22 +93,22 @@ export function stepSize(
   return candidates[0];
 }
 
-export function gridRowCount(items: LayoutItem[], minRows = 6): number {
-  const max = items.reduce((acc, it) => Math.max(acc, it.y + it.h), 0);
+export function gridRowCount(container: Container[], minRows = 6): number {
+  const max = container.reduce((acc, it) => Math.max(acc, it.y + it.hoehe), 0);
   return Math.max(minRows, max + 2);
 }
 
 export function findFreePosition(
-  items: LayoutItem[],
-  w: number,
-  h: number,
+  container: Container[],
+  breite: number,
+  hoehe: number,
   cols: number,
 ): { x: number; y: number } {
-  const maxY = gridRowCount(items) + h;
+  const maxY = gridRowCount(container) + hoehe;
   for (let y = 0; y <= maxY; y++) {
-    for (let x = 0; x + w <= cols; x++) {
-      const candidate = { x, y, w, h };
-      const collides = items.some((it) => rectsOverlap(candidate, it));
+    for (let x = 0; x + breite <= cols; x++) {
+      const candidate = { x, y, breite, hoehe };
+      const collides = container.some((it) => rectsOverlap(candidate, it));
       if (!collides) return { x, y };
     }
   }
@@ -118,10 +118,15 @@ export function findFreePosition(
 export interface Rect {
   x: number;
   y: number;
-  w: number;
-  h: number;
+  breite: number;
+  hoehe: number;
 }
 
 export function rectsOverlap(a: Rect, b: Rect): boolean {
-  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  return (
+    a.x < b.x + b.breite &&
+    a.x + a.breite > b.x &&
+    a.y < b.y + b.hoehe &&
+    a.y + a.hoehe > b.y
+  );
 }

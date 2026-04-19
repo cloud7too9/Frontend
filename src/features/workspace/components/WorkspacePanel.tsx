@@ -1,18 +1,16 @@
-import { useEffect, useRef, useState } from "react";
 import type {
   KeyboardEvent as ReactKeyboardEvent,
   PointerEvent as ReactPointerEvent,
 } from "react";
-import type { LayoutItem } from "../model/workspace.types";
+import type { Container } from "../model/workspace.types";
 import type { PixelRect } from "../lib/layout-utils";
 import { stepSize } from "../lib/layout-utils";
-import { PANEL_REGISTRY } from "../model/panel-registry";
 import { useWorkspaceStore } from "../model/workspace.store";
-import { PanelContentRenderer } from "./PanelContentRenderer";
+import { ToolRenderer } from "./ToolRenderer";
 import { PanelToolbar } from "./PanelToolbar";
 
 interface Props {
-  item: LayoutItem;
+  container: Container;
   rect: PixelRect;
   editMode: boolean;
   selected: boolean;
@@ -21,65 +19,42 @@ interface Props {
 }
 
 export function WorkspacePanel({
-  item,
+  container,
   rect,
   editMode,
   selected,
   onDragPointerDown,
   onResizePointerDown,
 }: Props) {
-  const resizeItem = useWorkspaceStore((s) => s.resizeItem);
-  const renameItem = useWorkspaceStore((s) => s.renameItem);
-  const def = PANEL_REGISTRY[item.panelTyp];
-  const resizable = editMode && def.erlaubtResize;
-
-  const [renaming, setRenaming] = useState(false);
-  const [draft, setDraft] = useState(item.titel);
-  const inputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    if (!editMode) setRenaming(false);
-  }, [editMode]);
-
-  useEffect(() => {
-    if (renaming) {
-      setDraft(item.titel);
-      requestAnimationFrame(() => {
-        inputRef.current?.focus();
-        inputRef.current?.select();
-      });
-    }
-  }, [renaming, item.titel]);
-
-  const commitRename = () => {
-    renameItem(item.id, draft);
-    setRenaming(false);
-  };
-
-  const cancelRename = () => {
-    setDraft(item.titel);
-    setRenaming(false);
-  };
+  const aendereContainerGroesse = useWorkspaceStore((s) => s.aendereContainerGroesse);
+  const tool = useWorkspaceStore((s) => s.findeTool(container.toolId));
+  const resizable = editMode && (tool?.erlaubtResize ?? true);
 
   const onResizeKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
-    const map: Record<string, { dim: "w" | "h"; dir: 1 | -1 }> = {
-      ArrowRight: { dim: "w", dir: 1 },
-      ArrowLeft: { dim: "w", dir: -1 },
-      ArrowDown: { dim: "h", dir: 1 },
-      ArrowUp: { dim: "h", dir: -1 },
+    const map: Record<string, { dim: "breite" | "hoehe"; dir: 1 | -1 }> = {
+      ArrowRight: { dim: "breite", dir: 1 },
+      ArrowLeft: { dim: "breite", dir: -1 },
+      ArrowDown: { dim: "hoehe", dir: 1 },
+      ArrowUp: { dim: "hoehe", dir: -1 },
     };
     const action = map[e.key];
     if (!action) return;
     e.preventDefault();
-    const next = stepSize({ w: item.w, h: item.h }, action.dim, action.dir);
-    if (next.w !== item.w || next.h !== item.h) {
-      resizeItem(item.id, next.w, next.h);
+    const next = stepSize(
+      { breite: container.breite, hoehe: container.hoehe },
+      action.dim,
+      action.dir,
+    );
+    if (next.breite !== container.breite || next.hoehe !== container.hoehe) {
+      aendereContainerGroesse(container.id, next.breite, next.hoehe);
     }
   };
 
+  const titel = tool?.name ?? container.toolId;
+
   return (
     <div
-      data-panel-id={item.id}
+      data-container-id={container.id}
       style={{
         position: "absolute",
         left: rect.left,
@@ -99,68 +74,31 @@ export function WorkspacePanel({
       <div
         className={[
           "flex items-center justify-between gap-2 border-b border-border px-3 py-2 text-sm font-medium",
-          editMode && !renaming ? "cursor-move select-none bg-surface-raised" : "",
-          editMode && renaming ? "bg-surface-raised" : "",
+          editMode ? "cursor-move select-none bg-surface-raised" : "",
         ].join(" ")}
-        onPointerDown={
-          editMode && !renaming ? (e) => onDragPointerDown(e, item.id) : undefined
-        }
+        onPointerDown={editMode ? (e) => onDragPointerDown(e, container.id) : undefined}
       >
-        {renaming ? (
-          <input
-            ref={inputRef}
-            type="text"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                commitRename();
-              } else if (e.key === "Escape") {
-                e.preventDefault();
-                cancelRename();
-              }
-            }}
-            onBlur={commitRename}
-            onPointerDown={(e) => e.stopPropagation()}
-            aria-label="Paneltitel bearbeiten"
-            className="flex-1 rounded border border-border bg-surface px-1.5 py-0.5 text-sm focus:border-accent focus:outline-none"
-          />
-        ) : (
-          <span className="flex min-w-0 flex-1 items-center gap-1.5">
-            <span
-              className="min-w-0 truncate"
-              onDoubleClick={() => {
-                if (editMode) setRenaming(true);
-              }}
-              title={editMode ? "Doppelklick zum Umbenennen" : undefined}
-            >
-              {item.titel}
-            </span>
-            {editMode && (
-              <button
-                type="button"
-                aria-label="Paneltitel umbenennen"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={() => setRenaming(true)}
-                className="rounded p-0.5 text-xs text-text-muted transition hover:text-text focus:outline focus:outline-2 focus:outline-accent"
-              >
-                ✎
-              </button>
-            )}
+        <span className="flex min-w-0 flex-1 items-center gap-1.5">
+          <span className="min-w-0 truncate" title={titel}>
+            {titel}
           </span>
-        )}
-        {editMode && !renaming && <PanelToolbar panelId={item.id} />}
+          {tool?.typ === "extern" && (
+            <span className="rounded bg-surface px-1 text-[10px] uppercase tracking-wide text-text-muted">
+              extern
+            </span>
+          )}
+        </span>
+        {editMode && <PanelToolbar containerId={container.id} />}
       </div>
       <div className="flex-1 overflow-auto p-3">
-        <PanelContentRenderer typ={item.panelTyp} />
+        <ToolRenderer tool={tool} />
       </div>
       {resizable && (
         <div
           role="button"
-          aria-label={`Größe ändern (${item.w} mal ${item.h})`}
+          aria-label={`Größe ändern (${container.breite} mal ${container.hoehe})`}
           tabIndex={0}
-          onPointerDown={(e) => onResizePointerDown(e, item.id)}
+          onPointerDown={(e) => onResizePointerDown(e, container.id)}
           onKeyDown={onResizeKeyDown}
           className="absolute bottom-1 right-1 h-4 w-4 cursor-nwse-resize rounded-sm border border-border-strong bg-surface-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
         />

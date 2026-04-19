@@ -1,32 +1,38 @@
 import { Modal } from "../../../shared/ui/Modal";
-import { PANEL_REGISTRY, PANEL_TYPEN } from "../model/panel-registry";
 import { useWorkspaceStore } from "../model/workspace.store";
 
 export function AddPanelModal() {
   const open = useWorkspaceStore((s) => s.addPanelOpen);
   const closeAddPanel = useWorkspaceStore((s) => s.closeAddPanel);
-  const addItem = useWorkspaceStore((s) => s.addItem);
+  const fuegeContainerHinzu = useWorkspaceStore((s) => s.fuegeContainerHinzu);
+  const tools = useWorkspaceStore((s) => s.tools);
 
   return (
-    <Modal open={open} title="Panel hinzufügen" onClose={closeAddPanel}>
-      <div className="grid grid-cols-2 gap-3">
-        {PANEL_TYPEN.map((typ) => {
-          const def = PANEL_REGISTRY[typ];
-          return (
+    <Modal open={open} title="Container hinzufügen" onClose={closeAddPanel}>
+      {tools.length === 0 ? (
+        <div className="text-sm text-text-muted">Keine Tools verfügbar.</div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          {tools.map((tool) => (
             <button
-              key={typ}
+              key={tool.id}
               type="button"
-              onClick={() => addItem(typ)}
+              onClick={() => fuegeContainerHinzu(tool.id)}
               className="flex flex-col gap-1 rounded-md border border-border bg-surface px-3 py-3 text-left transition-colors hover:border-accent hover:bg-surface-raised"
             >
-              <span className="text-sm font-medium">{def.standardTitel}</span>
+              <span className="flex items-center gap-2 text-sm font-medium">
+                {tool.name}
+                <span className="rounded bg-surface-muted px-1 text-[10px] uppercase tracking-wide text-text-muted">
+                  {tool.typ}
+                </span>
+              </span>
               <span className="text-xs text-text-muted">
-                {def.standardBreite}×{def.standardHoehe} · min {def.minBreite}×{def.minHoehe}
+                {(tool.standardBreite ?? 3)}×{(tool.standardHoehe ?? 2)}
               </span>
             </button>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
     </Modal>
   );
 }

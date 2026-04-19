@@ -1,0 +1,68 @@
+[
+  {
+    "id": "tool-schnellnotiz",
+    "name": "Schnellnotiz",
+    "typ": "intern",
+    "quelle": "schnellnotiz",
+    "standardBreite": 3,
+    "standardHoehe": 2,
+    "minBreite": 2,
+    "minHoehe": 1,
+    "erlaubtResize": true
+  },
+  {
+    "id": "tool-aufgaben",
+    "name": "Aufgaben",
+    "typ": "intern",
+    "quelle": "aufgaben",
+    "standardBreite": 3,
+    "standardHoehe": 2,
+    "minBreite": 2,
+    "minHoehe": 2,
+    "erlaubtResize": true
+  },
+  {
+    "id": "tool-dateien",
+    "name": "Dateien",
+    "typ": "intern",
+    "quelle": "dateien",
+    "standardBreite": 4,
+    "standardHoehe": 2,
+    "minBreite": 2,
+    "minHoehe": 1,
+    "erlaubtResize": true
+  },
+  {
+    "id": "tool-projektstatus",
+    "name": "Projektstatus",
+    "typ": "intern",
+    "quelle": "projektstatus",
+    "standardBreite": 4,
+    "standardHoehe": 2,
+    "minBreite": 2,
+    "minHoehe": 1,
+    "erlaubtResize": true
+  },
+  {
+    "id": "tool-toolstart",
+    "name": "Tool-Start",
+    "typ": "intern",
+    "quelle": "toolstart",
+    "standardBreite": 2,
+    "standardHoehe": 2,
+    "minBreite": 2,
+    "minHoehe": 1,
+    "erlaubtResize": true
+  },
+  {
+    "id": "tool-letzteInhalte",
+    "name": "Letzte Inhalte",
+    "typ": "intern",
+    "quelle": "letzteInhalte",
+    "standardBreite": 4,
+    "standardHoehe": 2,
+    "minBreite": 2,
+    "minHoehe": 1,
+    "erlaubtResize": true
+  }
+]

@@ -1,59 +1,19 @@
-import type { Id } from "../../../shared/types/common.types";
-
-export type PanelTyp =
-  | "schnellnotiz"
-  | "aufgaben"
-  | "dateien"
-  | "projektstatus"
-  | "toolstart"
-  | "letzteInhalte";
-
-export interface LayoutItem {
-  id: Id;
-  panelTyp: PanelTyp;
-  titel: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  minW?: number;
-  minH?: number;
-  maxW?: number;
-  maxH?: number;
-}
-
-export interface WorkspaceLayout {
-  id: Id;
-  name: string;
-  spalten: number;
-  zeilenHoehe: number;
-  abstand: number;
-  items: LayoutItem[];
-}
-
-export interface PanelDefinition {
-  typ: PanelTyp;
-  standardTitel: string;
-  standardBreite: number;
-  standardHoehe: number;
-  minBreite: number;
-  minHoehe: number;
-  erlaubtResize: boolean;
-}
+export type { Container, Workspace } from "@shared/workspace.types";
+export type { Tool, ToolTyp } from "@shared/tool.types";
 
 export interface AllowedSize {
-  w: number;
-  h: number;
+  breite: number;
+  hoehe: number;
 }
 
 export const ALLOWED_SIZES: AllowedSize[] = [
-  { w: 1, h: 1 },
-  { w: 2, h: 1 },
-  { w: 2, h: 2 },
-  { w: 3, h: 2 },
-  { w: 4, h: 2 },
-  { w: 4, h: 3 },
-  { w: 6, h: 3 },
+  { breite: 1, hoehe: 1 },
+  { breite: 2, hoehe: 1 },
+  { breite: 2, hoehe: 2 },
+  { breite: 3, hoehe: 2 },
+  { breite: 4, hoehe: 2 },
+  { breite: 4, hoehe: 3 },
+  { breite: 6, hoehe: 3 },
 ];
 
 export type EditMode = "normal" | "edit";

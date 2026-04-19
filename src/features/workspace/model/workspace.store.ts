@@ -1,175 +1,216 @@
 import { create } from "zustand";
 import type { Id } from "../../../shared/types/common.types";
-import type { LayoutItem, PanelTyp, WorkspaceLayout } from "./workspace.types";
-import { DEFAULT_LAYOUT } from "./default-layout";
-import { PANEL_REGISTRY } from "./panel-registry";
-import { clampItemToGrid, findFreePosition } from "../lib/layout-utils";
+import type { Container, Tool, Workspace } from "./workspace.types";
+import { clampContainerToGrid, findFreePosition } from "../lib/layout-utils";
 import { hasCollision } from "../lib/collision-utils";
-import {
-  clearLayoutStorage,
-  loadLayoutFromStorage,
-  saveLayoutToStorage,
-} from "../lib/storage";
+import { fetchTools, fetchWorkspace, saveWorkspace } from "../api/workspace.api";
+
+export const DEFAULT_WORKSPACE_ID = "default";
+export const GRID_GAP = 12;
+
+export type LadeStatus = "idle" | "laedt" | "bereit" | "fehler";
 
 interface WorkspaceState {
-  layout: WorkspaceLayout;
+  workspace: Workspace | null;
+  tools: Tool[];
   editMode: boolean;
-  selectedPanelId: Id | null;
+  selectedContainerId: Id | null;
   addPanelOpen: boolean;
+  ladeStatus: LadeStatus;
+  ladeFehler: string | null;
+  speicherLaeuft: boolean;
 
   setEditMode: (value: boolean) => void;
   toggleEditMode: () => void;
-  selectPanel: (id: Id | null) => void;
+  selectContainer: (id: Id | null) => void;
   openAddPanel: () => void;
   closeAddPanel: () => void;
 
-  moveItem: (id: Id, x: number, y: number) => boolean;
-  resizeItem: (id: Id, w: number, h: number) => boolean;
-  renameItem: (id: Id, titel: string) => boolean;
-  addItem: (typ: PanelTyp) => void;
-  removeItem: (id: Id) => void;
-  duplicateItem: (id: Id) => void;
+  ladeWorkspace: (id?: string) => Promise<void>;
+  speichereWorkspace: () => Promise<void>;
 
-  resetLayout: () => void;
-  loadLayout: () => void;
-  saveLayoutNow: () => void;
-}
+  verschiebeContainer: (id: Id, x: number, y: number) => boolean;
+  aendereContainerGroesse: (id: Id, breite: number, hoehe: number) => boolean;
+  fuegeContainerHinzu: (toolId: string) => void;
+  entferneContainer: (id: Id) => void;
+  dupliziereContainer: (id: Id) => void;
 
-function cloneLayout(layout: WorkspaceLayout): WorkspaceLayout {
-  return { ...layout, items: layout.items.map((i) => ({ ...i })) };
+  findeTool: (toolId: string) => Tool | undefined;
 }
 
 function nextId(prefix: string): Id {
   return `${prefix}-${Math.random().toString(36).slice(2, 8)}-${Date.now().toString(36)}`;
 }
 
+function cloneWorkspace(ws: Workspace): Workspace {
+  return { ...ws, container: ws.container.map((c) => ({ ...c })) };
+}
+
+function toolMinBreite(tool: Tool | undefined): number {
+  return tool?.minBreite ?? 1;
+}
+
+function toolMinHoehe(tool: Tool | undefined): number {
+  return tool?.minHoehe ?? 1;
+}
+
+function toolStandardBreite(tool: Tool | undefined): number {
+  return tool?.standardBreite ?? 3;
+}
+
+function toolStandardHoehe(tool: Tool | undefined): number {
+  return tool?.standardHoehe ?? 2;
+}
+
+function toolErlaubtResize(tool: Tool | undefined): boolean {
+  return tool?.erlaubtResize ?? true;
+}
+
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
-  layout: cloneLayout(DEFAULT_LAYOUT),
+  workspace: null,
+  tools: [],
   editMode: false,
-  selectedPanelId: null,
+  selectedContainerId: null,
   addPanelOpen: false,
+  ladeStatus: "idle",
+  ladeFehler: null,
+  speicherLaeuft: false,
 
   setEditMode: (value) => {
-    set({ editMode: value, selectedPanelId: value ? get().selectedPanelId : null });
+    set({
+      editMode: value,
+      selectedContainerId: value ? get().selectedContainerId : null,
+    });
   },
   toggleEditMode: () => {
     get().setEditMode(!get().editMode);
   },
-  selectPanel: (id) => set({ selectedPanelId: id }),
+  selectContainer: (id) => set({ selectedContainerId: id }),
   openAddPanel: () => set({ addPanelOpen: true }),
   closeAddPanel: () => set({ addPanelOpen: false }),
 
-  moveItem: (id, x, y) => {
-    const { layout } = get();
-    const target = layout.items.find((i) => i.id === id);
+  ladeWorkspace: async (id = DEFAULT_WORKSPACE_ID) => {
+    set({ ladeStatus: "laedt", ladeFehler: null });
+    try {
+      const [workspace, tools] = await Promise.all([fetchWorkspace(id), fetchTools()]);
+      set({ workspace, tools, ladeStatus: "bereit" });
+    } catch (err) {
+      set({
+        ladeStatus: "fehler",
+        ladeFehler: err instanceof Error ? err.message : "Unbekannter Fehler",
+      });
+    }
+  },
+
+  speichereWorkspace: async () => {
+    const { workspace } = get();
+    if (!workspace) return;
+    set({ speicherLaeuft: true });
+    try {
+      const saved = await saveWorkspace(workspace);
+      set({ workspace: saved });
+    } finally {
+      set({ speicherLaeuft: false });
+    }
+  },
+
+  verschiebeContainer: (id, x, y) => {
+    const { workspace } = get();
+    if (!workspace) return false;
+    const target = workspace.container.find((c) => c.id === id);
     if (!target) return false;
-    const candidate = clampItemToGrid({ ...target, x, y }, layout.spalten);
+    const candidate = clampContainerToGrid({ ...target, x, y }, workspace.spalten);
     if (candidate.x === target.x && candidate.y === target.y) return false;
-    if (hasCollision(candidate, layout.items)) return false;
-    const items = layout.items.map((i) => (i.id === id ? candidate : i));
-    set({ layout: { ...layout, items } });
-    saveLayoutToStorage({ ...layout, items });
+    if (hasCollision(candidate, workspace.container)) return false;
+    const container = workspace.container.map((c) => (c.id === id ? candidate : c));
+    set({ workspace: { ...workspace, container } });
     return true;
   },
 
-  resizeItem: (id, w, h) => {
-    const { layout } = get();
-    const target = layout.items.find((i) => i.id === id);
+  aendereContainerGroesse: (id, breite, hoehe) => {
+    const { workspace, tools } = get();
+    if (!workspace) return false;
+    const target = workspace.container.find((c) => c.id === id);
     if (!target) return false;
-    const def = PANEL_REGISTRY[target.panelTyp];
-    if (!def.erlaubtResize) return false;
-    const minW = target.minW ?? def.minBreite;
-    const minH = target.minH ?? def.minHoehe;
-    const clampedW = Math.max(minW, Math.min(w, layout.spalten));
-    const clampedH = Math.max(minH, h);
-    const candidate = clampItemToGrid(
-      { ...target, w: clampedW, h: clampedH },
-      layout.spalten,
+    const tool = tools.find((t) => t.id === target.toolId);
+    if (!toolErlaubtResize(tool)) return false;
+    const minB = toolMinBreite(tool);
+    const minH = toolMinHoehe(tool);
+    const clampedBreite = Math.max(minB, Math.min(breite, workspace.spalten));
+    const clampedHoehe = Math.max(minH, hoehe);
+    const candidate = clampContainerToGrid(
+      { ...target, breite: clampedBreite, hoehe: clampedHoehe },
+      workspace.spalten,
     );
-    if (candidate.w === target.w && candidate.h === target.h) return false;
-    if (hasCollision(candidate, layout.items)) return false;
-    const items = layout.items.map((i) => (i.id === id ? candidate : i));
-    set({ layout: { ...layout, items } });
-    saveLayoutToStorage({ ...layout, items });
+    if (candidate.breite === target.breite && candidate.hoehe === target.hoehe) {
+      return false;
+    }
+    if (hasCollision(candidate, workspace.container)) return false;
+    const container = workspace.container.map((c) => (c.id === id ? candidate : c));
+    set({ workspace: { ...workspace, container } });
     return true;
   },
 
-  renameItem: (id, titel) => {
-    const trimmed = titel.trim();
-    if (!trimmed) return false;
-    const { layout } = get();
-    const target = layout.items.find((i) => i.id === id);
-    if (!target) return false;
-    if (target.titel === trimmed) return false;
-    const items = layout.items.map((i) => (i.id === id ? { ...i, titel: trimmed } : i));
-    set({ layout: { ...layout, items } });
-    saveLayoutToStorage({ ...layout, items });
-    return true;
-  },
-
-  addItem: (typ) => {
-    const { layout } = get();
-    const def = PANEL_REGISTRY[typ];
-    const pos = findFreePosition(
-      layout.items,
-      def.standardBreite,
-      def.standardHoehe,
-      layout.spalten,
-    );
-    const item: LayoutItem = {
-      id: nextId(`panel-${typ}`),
-      panelTyp: typ,
-      titel: def.standardTitel,
+  fuegeContainerHinzu: (toolId) => {
+    const { workspace, tools } = get();
+    if (!workspace) return;
+    const tool = tools.find((t) => t.id === toolId);
+    const breite = toolStandardBreite(tool);
+    const hoehe = toolStandardHoehe(tool);
+    const pos = findFreePosition(workspace.container, breite, hoehe, workspace.spalten);
+    const container: Container = {
+      id: nextId(`container-${toolId}`),
+      toolId,
       x: pos.x,
       y: pos.y,
-      w: def.standardBreite,
-      h: def.standardHoehe,
-      minW: def.minBreite,
-      minH: def.minHoehe,
+      breite,
+      hoehe,
     };
-    const items = [...layout.items, item];
-    set({ layout: { ...layout, items }, addPanelOpen: false });
-    saveLayoutToStorage({ ...layout, items });
-  },
-
-  removeItem: (id) => {
-    const { layout, selectedPanelId } = get();
-    const items = layout.items.filter((i) => i.id !== id);
     set({
-      layout: { ...layout, items },
-      selectedPanelId: selectedPanelId === id ? null : selectedPanelId,
+      workspace: { ...workspace, container: [...workspace.container, container] },
+      addPanelOpen: false,
     });
-    saveLayoutToStorage({ ...layout, items });
   },
 
-  duplicateItem: (id) => {
-    const { layout } = get();
-    const target = layout.items.find((i) => i.id === id);
+  entferneContainer: (id) => {
+    const { workspace, selectedContainerId } = get();
+    if (!workspace) return;
+    const container = workspace.container.filter((c) => c.id !== id);
+    set({
+      workspace: { ...workspace, container },
+      selectedContainerId: selectedContainerId === id ? null : selectedContainerId,
+    });
+  },
+
+  dupliziereContainer: (id) => {
+    const { workspace } = get();
+    if (!workspace) return;
+    const target = workspace.container.find((c) => c.id === id);
     if (!target) return;
-    const pos = findFreePosition(layout.items, target.w, target.h, layout.spalten);
-    const copy: LayoutItem = {
+    const pos = findFreePosition(
+      workspace.container,
+      target.breite,
+      target.hoehe,
+      workspace.spalten,
+    );
+    const copy: Container = {
       ...target,
-      id: nextId(`panel-${target.panelTyp}`),
+      id: nextId(`container-${target.toolId}`),
       x: pos.x,
       y: pos.y,
     };
-    const items = [...layout.items, copy];
-    set({ layout: { ...layout, items } });
-    saveLayoutToStorage({ ...layout, items });
+    set({
+      workspace: { ...workspace, container: [...workspace.container, copy] },
+    });
   },
 
-  resetLayout: () => {
-    const fresh = cloneLayout(DEFAULT_LAYOUT);
-    set({ layout: fresh, selectedPanelId: null });
-    clearLayoutStorage();
-  },
-
-  loadLayout: () => {
-    const loaded = loadLayoutFromStorage();
-    if (loaded) set({ layout: loaded });
-  },
-
-  saveLayoutNow: () => {
-    saveLayoutToStorage(get().layout);
-  },
+  findeTool: (toolId) => get().tools.find((t) => t.id === toolId),
 }));
+
+// Test-Helper: ersetzt den Workspace direkt (ohne API).
+export function __setWorkspaceForTest(workspace: Workspace): void {
+  useWorkspaceStore.setState({
+    workspace: cloneWorkspace(workspace),
+    ladeStatus: "bereit",
+  });
+}

@@ -6,20 +6,19 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { useWorkspaceStore } from "../model/workspace.store";
+import { GRID_GAP, useWorkspaceStore } from "../model/workspace.store";
 import {
   cellToPixel,
   columnWidth,
-  clampItemToGrid,
+  clampContainerToGrid,
   gridRowCount,
   snapSize,
   type GridConfig,
   type PixelRect,
 } from "../lib/layout-utils";
 import { hasCollision } from "../lib/collision-utils";
-import { PANEL_REGISTRY } from "../model/panel-registry";
 import type { Id } from "../../../shared/types/common.types";
-import type { LayoutItem } from "../model/workspace.types";
+import type { Container } from "../model/workspace.types";
 import { WorkspacePanel } from "./WorkspacePanel";
 import { EmptyGridHint } from "./EmptyGridHint";
 
@@ -39,18 +38,19 @@ type DragState =
       id: Id;
       pointerId: number;
       startPointer: { x: number; y: number };
-      startSize: { w: number; h: number };
-      previewSize: { w: number; h: number };
+      startSize: { breite: number; hoehe: number };
+      previewSize: { breite: number; hoehe: number };
       valid: boolean;
     };
 
 export function WorkspaceGrid() {
-  const layout = useWorkspaceStore((s) => s.layout);
+  const workspace = useWorkspaceStore((s) => s.workspace);
+  const tools = useWorkspaceStore((s) => s.tools);
   const editMode = useWorkspaceStore((s) => s.editMode);
-  const selectedPanelId = useWorkspaceStore((s) => s.selectedPanelId);
-  const selectPanel = useWorkspaceStore((s) => s.selectPanel);
-  const moveItem = useWorkspaceStore((s) => s.moveItem);
-  const resizeItem = useWorkspaceStore((s) => s.resizeItem);
+  const selectedContainerId = useWorkspaceStore((s) => s.selectedContainerId);
+  const selectContainer = useWorkspaceStore((s) => s.selectContainer);
+  const verschiebeContainer = useWorkspaceStore((s) => s.verschiebeContainer);
+  const aendereContainerGroesse = useWorkspaceStore((s) => s.aendereContainerGroesse);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -66,58 +66,55 @@ export function WorkspaceGrid() {
     return () => observer.disconnect();
   }, []);
 
-  const config: GridConfig = useMemo(
-    () => ({
-      cols: layout.spalten,
-      rowHeight: layout.zeilenHoehe,
-      gap: layout.abstand,
+  const config: GridConfig | null = useMemo(() => {
+    if (!workspace) return null;
+    return {
+      cols: workspace.spalten,
+      rowHeight: workspace.zeilenHoehe,
+      gap: GRID_GAP,
       containerWidth,
-    }),
-    [layout.spalten, layout.zeilenHoehe, layout.abstand, containerWidth],
-  );
-
-  const totalRows = gridRowCount(layout.items);
-  const totalHeight = totalRows * layout.zeilenHoehe + (totalRows - 1) * layout.abstand;
+    };
+  }, [workspace, containerWidth]);
 
   const onDragPointerDown = (e: ReactPointerEvent, id: Id) => {
-    if (!editMode) return;
+    if (!editMode || !workspace) return;
     e.preventDefault();
-    const item = layout.items.find((i) => i.id === id);
-    if (!item) return;
-    selectPanel(id);
+    const container = workspace.container.find((c) => c.id === id);
+    if (!container) return;
+    selectContainer(id);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     setDrag({
       kind: "move",
       id,
       pointerId: e.pointerId,
       startPointer: { x: e.clientX, y: e.clientY },
-      startCell: { x: item.x, y: item.y },
-      previewCell: { x: item.x, y: item.y },
+      startCell: { x: container.x, y: container.y },
+      previewCell: { x: container.x, y: container.y },
       valid: true,
     });
   };
 
   const onResizePointerDown = (e: ReactPointerEvent, id: Id) => {
-    if (!editMode) return;
+    if (!editMode || !workspace) return;
     e.preventDefault();
     e.stopPropagation();
-    const item = layout.items.find((i) => i.id === id);
-    if (!item) return;
-    selectPanel(id);
+    const container = workspace.container.find((c) => c.id === id);
+    if (!container) return;
+    selectContainer(id);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     setDrag({
       kind: "resize",
       id,
       pointerId: e.pointerId,
       startPointer: { x: e.clientX, y: e.clientY },
-      startSize: { w: item.w, h: item.h },
-      previewSize: { w: item.w, h: item.h },
+      startSize: { breite: container.breite, hoehe: container.hoehe },
+      previewSize: { breite: container.breite, hoehe: container.hoehe },
       valid: true,
     });
   };
 
   useEffect(() => {
-    if (drag.kind === "idle") return;
+    if (drag.kind === "idle" || !workspace || !config) return;
 
     const onMove = (e: PointerEvent) => {
       if (e.pointerId !== drag.pointerId) return;
@@ -125,43 +122,45 @@ export function WorkspaceGrid() {
       const dy = e.clientY - drag.startPointer.y;
 
       if (drag.kind === "move") {
-        const item = layout.items.find((i) => i.id === drag.id);
-        if (!item) return;
+        const c = workspace.container.find((it) => it.id === drag.id);
+        if (!c) return;
         const colGap = columnWidth(config) + config.gap;
         const rowGap = config.rowHeight + config.gap;
         const dxCells = Math.round(dx / colGap);
         const dyCells = Math.round(dy / rowGap);
-        const target = clampItemToGrid(
+        const target = clampContainerToGrid(
           {
-            ...item,
+            ...c,
             x: drag.startCell.x + dxCells,
             y: Math.max(0, drag.startCell.y + dyCells),
           },
-          layout.spalten,
+          workspace.spalten,
         );
-        const valid = !hasCollision(target, layout.items);
+        const valid = !hasCollision(target, workspace.container);
         setDrag({
           ...drag,
           previewCell: { x: target.x, y: target.y },
           valid,
         });
       } else if (drag.kind === "resize") {
-        const item = layout.items.find((i) => i.id === drag.id);
-        if (!item) return;
+        const c = workspace.container.find((it) => it.id === drag.id);
+        if (!c) return;
+        const tool = tools.find((t) => t.id === c.toolId);
         const colGap = columnWidth(config) + config.gap;
         const rowGap = config.rowHeight + config.gap;
-        const rawW = drag.startSize.w + dx / colGap;
-        const rawH = drag.startSize.h + dy / rowGap;
-        const def = PANEL_REGISTRY[item.panelTyp];
-        const snapped = snapSize(Math.max(def.minBreite, rawW), Math.max(def.minHoehe, rawH));
-        const candidate: LayoutItem = clampItemToGrid(
-          { ...item, w: snapped.w, h: snapped.h },
-          layout.spalten,
+        const rawBreite = drag.startSize.breite + dx / colGap;
+        const rawHoehe = drag.startSize.hoehe + dy / rowGap;
+        const minB = tool?.minBreite ?? 1;
+        const minH = tool?.minHoehe ?? 1;
+        const snapped = snapSize(Math.max(minB, rawBreite), Math.max(minH, rawHoehe));
+        const candidate = clampContainerToGrid(
+          { ...c, breite: snapped.breite, hoehe: snapped.hoehe },
+          workspace.spalten,
         );
-        const valid = !hasCollision(candidate, layout.items);
+        const valid = !hasCollision(candidate, workspace.container);
         setDrag({
           ...drag,
-          previewSize: { w: candidate.w, h: candidate.h },
+          previewSize: { breite: candidate.breite, hoehe: candidate.hoehe },
           valid,
         });
       }
@@ -170,10 +169,10 @@ export function WorkspaceGrid() {
     const onUp = (e: PointerEvent) => {
       if (e.pointerId !== drag.pointerId) return;
       if (drag.kind === "move" && drag.valid) {
-        moveItem(drag.id, drag.previewCell.x, drag.previewCell.y);
+        verschiebeContainer(drag.id, drag.previewCell.x, drag.previewCell.y);
       }
       if (drag.kind === "resize" && drag.valid) {
-        resizeItem(drag.id, drag.previewSize.w, drag.previewSize.h);
+        aendereContainerGroesse(drag.id, drag.previewSize.breite, drag.previewSize.hoehe);
       }
       setDrag({ kind: "idle" });
     };
@@ -188,11 +187,15 @@ export function WorkspaceGrid() {
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onCancel);
     };
-  }, [drag, config, layout, moveItem, resizeItem]);
+  }, [drag, config, workspace, tools, verschiebeContainer, aendereContainerGroesse]);
 
-  if (layout.items.length === 0) {
+  if (!workspace || !config) return null;
+  if (workspace.container.length === 0) {
     return <EmptyGridHint />;
   }
+
+  const totalRows = gridRowCount(workspace.container);
+  const totalHeight = totalRows * workspace.zeilenHoehe + (totalRows - 1) * config.gap;
 
   const col = columnWidth(config);
   const gridBackground = editMode
@@ -207,21 +210,23 @@ export function WorkspaceGrid() {
       className="relative w-full"
       style={{ height: totalHeight, ...gridBackground }}
     >
-      {layout.items.map((item) => {
-        const rect = cellToPixel(item.x, item.y, item.w, item.h, config);
+      {workspace.container.map((c) => {
+        const rect = cellToPixel(c.x, c.y, c.breite, c.hoehe, config);
         return (
           <WorkspacePanel
-            key={item.id}
-            item={item}
+            key={c.id}
+            container={c}
             rect={rect}
             editMode={editMode}
-            selected={selectedPanelId === item.id}
+            selected={selectedContainerId === c.id}
             onDragPointerDown={onDragPointerDown}
             onResizePointerDown={onResizePointerDown}
           />
         );
       })}
-      {drag.kind !== "idle" && <DragPreview drag={drag} config={config} layout={layout.items} />}
+      {drag.kind !== "idle" && (
+        <DragPreview drag={drag} config={config} container={workspace.container} />
+      )}
     </div>
   );
 }
@@ -229,19 +234,19 @@ export function WorkspaceGrid() {
 function DragPreview({
   drag,
   config,
-  layout,
+  container,
 }: {
   drag: Exclude<DragState, { kind: "idle" }>;
   config: GridConfig;
-  layout: LayoutItem[];
+  container: Container[];
 }) {
-  const item = layout.find((i) => i.id === drag.id);
-  if (!item) return null;
+  const c = container.find((it) => it.id === drag.id);
+  if (!c) return null;
   let rect: PixelRect;
   if (drag.kind === "move") {
-    rect = cellToPixel(drag.previewCell.x, drag.previewCell.y, item.w, item.h, config);
+    rect = cellToPixel(drag.previewCell.x, drag.previewCell.y, c.breite, c.hoehe, config);
   } else {
-    rect = cellToPixel(item.x, item.y, drag.previewSize.w, drag.previewSize.h, config);
+    rect = cellToPixel(c.x, c.y, drag.previewSize.breite, drag.previewSize.hoehe, config);
   }
   return (
     <div

@@ -3,19 +3,16 @@ import { useWorkspaceStore } from "../model/workspace.store";
 import type { Id } from "../../../shared/types/common.types";
 
 interface Props {
-  panelId: Id;
+  containerId: Id;
 }
 
-export function PanelToolbar({ panelId }: Props) {
-  const duplicateItem = useWorkspaceStore((s) => s.duplicateItem);
-  const removeItem = useWorkspaceStore((s) => s.removeItem);
+export function PanelToolbar({ containerId }: Props) {
+  const dupliziereContainer = useWorkspaceStore((s) => s.dupliziereContainer);
+  const entferneContainer = useWorkspaceStore((s) => s.entferneContainer);
 
   return (
     <div className="flex items-center gap-0.5" onPointerDown={(e) => e.stopPropagation()}>
-      <IconButton
-        label="Duplizieren"
-        onClick={() => duplicateItem(panelId)}
-      >
+      <IconButton label="Duplizieren" onClick={() => dupliziereContainer(containerId)}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <rect x="9" y="9" width="11" height="11" rx="2" />
           <rect x="4" y="4" width="11" height="11" rx="2" />
@@ -23,7 +20,7 @@ export function PanelToolbar({ panelId }: Props) {
       </IconButton>
       <IconButton
         label="Entfernen"
-        onClick={() => removeItem(panelId)}
+        onClick={() => entferneContainer(containerId)}
         className="hover:bg-danger/20 hover:text-danger"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   cellToPixel,
-  clampItemToGrid,
+  clampContainerToGrid,
   columnWidth,
   findFreePosition,
   pixelToCell,
@@ -10,18 +10,17 @@ import {
   stepSize,
 } from "../features/workspace/lib/layout-utils";
 import { hasCollision } from "../features/workspace/lib/collision-utils";
-import type { LayoutItem } from "../features/workspace/model/workspace.types";
+import type { Container } from "../features/workspace/model/workspace.types";
 
 const baseConfig = { cols: 12, rowHeight: 80, gap: 12, containerWidth: 1200 };
 
-const mkItem = (overrides: Partial<LayoutItem>): LayoutItem => ({
+const mkContainer = (overrides: Partial<Container>): Container => ({
   id: "x",
-  panelTyp: "schnellnotiz",
-  titel: "x",
+  toolId: "tool-schnellnotiz",
   x: 0,
   y: 0,
-  w: 2,
-  h: 2,
+  breite: 2,
+  hoehe: 2,
   ...overrides,
 });
 
@@ -67,88 +66,98 @@ describe("pixelToCell", () => {
   });
 });
 
-describe("clampItemToGrid", () => {
+describe("clampContainerToGrid", () => {
   it("prevents overflow on the right", () => {
-    const clamped = clampItemToGrid(mkItem({ x: 11, w: 4 }), 12);
-    expect(clamped.x + clamped.w).toBeLessThanOrEqual(12);
+    const clamped = clampContainerToGrid(mkContainer({ x: 11, breite: 4 }), 12);
+    expect(clamped.x + clamped.breite).toBeLessThanOrEqual(12);
   });
 
   it("truncates width larger than grid", () => {
-    const clamped = clampItemToGrid(mkItem({ x: 0, w: 20 }), 12);
-    expect(clamped.w).toBe(12);
+    const clamped = clampContainerToGrid(mkContainer({ x: 0, breite: 20 }), 12);
+    expect(clamped.breite).toBe(12);
   });
 });
 
 describe("snapSize", () => {
   it("snaps arbitrary size to nearest allowed", () => {
     const snapped = snapSize(3.4, 1.9);
-    expect(snapped).toEqual({ w: 3, h: 2 });
+    expect(snapped).toEqual({ breite: 3, hoehe: 2 });
   });
 
   it("returns a size from the allowed list", () => {
     const snapped = snapSize(5, 3);
     expect([
-      { w: 4, h: 3 },
-      { w: 6, h: 3 },
-      { w: 4, h: 2 },
+      { breite: 4, hoehe: 3 },
+      { breite: 6, hoehe: 3 },
+      { breite: 4, hoehe: 2 },
     ]).toContainEqual(snapped);
   });
 });
 
 describe("rectsOverlap / hasCollision", () => {
   it("detects overlap", () => {
-    expect(rectsOverlap({ x: 0, y: 0, w: 2, h: 2 }, { x: 1, y: 1, w: 2, h: 2 })).toBe(true);
+    expect(
+      rectsOverlap(
+        { x: 0, y: 0, breite: 2, hoehe: 2 },
+        { x: 1, y: 1, breite: 2, hoehe: 2 },
+      ),
+    ).toBe(true);
   });
 
   it("ignores adjacent rects", () => {
-    expect(rectsOverlap({ x: 0, y: 0, w: 2, h: 2 }, { x: 2, y: 0, w: 2, h: 2 })).toBe(false);
+    expect(
+      rectsOverlap(
+        { x: 0, y: 0, breite: 2, hoehe: 2 },
+        { x: 2, y: 0, breite: 2, hoehe: 2 },
+      ),
+    ).toBe(false);
   });
 
   it("ignores the same item (by id) when checking collisions", () => {
-    const a = mkItem({ id: "a", x: 0, y: 0, w: 2, h: 2 });
-    const b = mkItem({ id: "b", x: 5, y: 0, w: 2, h: 2 });
+    const a = mkContainer({ id: "a", x: 0, y: 0, breite: 2, hoehe: 2 });
+    const b = mkContainer({ id: "b", x: 5, y: 0, breite: 2, hoehe: 2 });
     expect(hasCollision(a, [a, b])).toBe(false);
   });
 });
 
 describe("stepSize", () => {
-  it("returns the current size when no bigger candidate exists (w)", () => {
-    const r = stepSize({ w: 6, h: 3 }, "w", 1);
-    expect(r).toEqual({ w: 6, h: 3 });
+  it("returns the current size when no bigger candidate exists (breite)", () => {
+    const r = stepSize({ breite: 6, hoehe: 3 }, "breite", 1);
+    expect(r).toEqual({ breite: 6, hoehe: 3 });
   });
 
-  it("returns the current size when no smaller candidate exists (h)", () => {
-    const r = stepSize({ w: 1, h: 1 }, "h", -1);
-    expect(r).toEqual({ w: 1, h: 1 });
+  it("returns the current size when no smaller candidate exists (hoehe)", () => {
+    const r = stepSize({ breite: 1, hoehe: 1 }, "hoehe", -1);
+    expect(r).toEqual({ breite: 1, hoehe: 1 });
   });
 
-  it("grows width to the nearest allowed bigger width", () => {
-    const r = stepSize({ w: 2, h: 1 }, "w", 1);
-    expect(r.w).toBeGreaterThan(2);
+  it("grows breite to the nearest allowed bigger breite", () => {
+    const r = stepSize({ breite: 2, hoehe: 1 }, "breite", 1);
+    expect(r.breite).toBeGreaterThan(2);
   });
 
-  it("shrinks height to the nearest allowed smaller height", () => {
-    const r = stepSize({ w: 4, h: 3 }, "h", -1);
-    expect(r.h).toBeLessThan(3);
+  it("shrinks hoehe to the nearest allowed smaller hoehe", () => {
+    const r = stepSize({ breite: 4, hoehe: 3 }, "hoehe", -1);
+    expect(r.hoehe).toBeLessThan(3);
   });
 });
 
 describe("findFreePosition", () => {
-  it("places the first panel at origin", () => {
+  it("places the first container at origin", () => {
     expect(findFreePosition([], 2, 2, 12)).toEqual({ x: 0, y: 0 });
   });
 
-  it("finds a spot next to an existing panel", () => {
-    const existing = [mkItem({ id: "a", x: 0, y: 0, w: 2, h: 2 })];
+  it("finds a spot next to an existing container", () => {
+    const existing = [mkContainer({ id: "a", x: 0, y: 0, breite: 2, hoehe: 2 })];
     const pos = findFreePosition(existing, 2, 2, 12);
     expect(pos.x).toBe(2);
     expect(pos.y).toBe(0);
   });
 
   it("falls to the next row when row is full", () => {
-    const existing: LayoutItem[] = [];
+    const existing: Container[] = [];
     for (let i = 0; i < 6; i++) {
-      existing.push(mkItem({ id: `a${i}`, x: i * 2, y: 0, w: 2, h: 2 }));
+      existing.push(mkContainer({ id: `a${i}`, x: i * 2, y: 0, breite: 2, hoehe: 2 }));
     }
     const pos = findFreePosition(existing, 2, 2, 12);
     expect(pos.y).toBeGreaterThanOrEqual(2);
