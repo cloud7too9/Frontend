@@ -1,0 +1,5 @@
+[
+  { "id": "tool-notiz", "name": "Notiz", "typ": "intern", "quelle": "notiz" },
+  { "id": "tool-liste", "name": "Liste", "typ": "intern", "quelle": "liste" },
+  { "id": "tool-docs", "name": "Dokumente", "typ": "extern", "quelle": "https://example.org" }
+]

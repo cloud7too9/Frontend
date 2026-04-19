@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "paths": {
+      "@mainhub/shared": ["../shared/src/types.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}
