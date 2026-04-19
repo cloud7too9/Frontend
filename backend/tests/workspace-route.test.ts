@@ -59,6 +59,50 @@ describe("workspace route", () => {
     expect(res.status).toBe(400);
   });
 
+  it("PUT /api/workspace akzeptiert Container mit und ohne titel", async () => {
+    const app = createApp(dir);
+    const body: Workspace = {
+      id: "ws-1",
+      name: "Seed",
+      spalten: 12,
+      zeilenHoehe: 80,
+      container: [
+        { id: "c1", toolId: "tool-notiz", titel: "Einkauf", x: 0, y: 0, breite: 2, hoehe: 2 },
+        { id: "c2", toolId: "tool-notiz", x: 2, y: 0, breite: 2, hoehe: 2 },
+      ],
+    };
+    const res = await request(app).put("/api/workspace").send(body);
+    expect(res.status).toBe(200);
+    expect(res.body.container[0].titel).toBe("Einkauf");
+    expect(res.body.container[1].titel).toBeUndefined();
+  });
+
+  it("PUT /api/workspace lehnt titel vom falschen Typ ab", async () => {
+    const app = createApp(dir);
+    const body = {
+      id: "ws-1",
+      name: "Seed",
+      spalten: 12,
+      zeilenHoehe: 80,
+      container: [{ id: "c1", toolId: "tool-notiz", titel: 123, x: 0, y: 0, breite: 2, hoehe: 2 }],
+    };
+    const res = await request(app).put("/api/workspace").send(body);
+    expect(res.status).toBe(400);
+  });
+
+  it("PUT /api/workspace lehnt breite<1 ab", async () => {
+    const app = createApp(dir);
+    const body = {
+      id: "ws-1",
+      name: "Seed",
+      spalten: 12,
+      zeilenHoehe: 80,
+      container: [{ id: "c1", toolId: "tool-notiz", x: 0, y: 0, breite: 0, hoehe: 2 }],
+    };
+    const res = await request(app).put("/api/workspace").send(body);
+    expect(res.status).toBe(400);
+  });
+
   it("GET /api/tools liefert das Tool-Array", async () => {
     const app = createApp(dir);
     const res = await request(app).get("/api/tools");

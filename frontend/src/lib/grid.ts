@@ -92,3 +92,38 @@ export function gridHeightRows(container: Container[], min: number = 6): number 
   const deepest = container.reduce((max, c) => Math.max(max, c.y + c.hoehe), 0);
   return Math.max(min, deepest + 1);
 }
+
+export function fitsInGrid(c: Container, spalten: number): boolean {
+  return c.x >= 0 && c.y >= 0 && c.breite >= 1 && c.hoehe >= 1 && c.x + c.breite <= spalten;
+}
+
+export function canPlace(candidate: Container, others: Container[], spalten: number): boolean {
+  if (!fitsInGrid(candidate, spalten)) return false;
+  return !others.some((o) => o.id !== candidate.id && overlaps(candidate, o));
+}
+
+export function computeMove(
+  c: Container,
+  dxCells: number,
+  dyCells: number,
+  spalten: number,
+  others: Container[]
+): Container | null {
+  const target: Container = { ...c, x: c.x + dxCells, y: c.y + dyCells };
+  return canPlace(target, others, spalten) ? target : null;
+}
+
+export function computeResize(
+  c: Container,
+  dwCells: number,
+  dhCells: number,
+  spalten: number,
+  others: Container[]
+): Container | null {
+  const target: Container = {
+    ...c,
+    breite: c.breite + dwCells,
+    hoehe: c.hoehe + dhCells,
+  };
+  return canPlace(target, others, spalten) ? target : null;
+}

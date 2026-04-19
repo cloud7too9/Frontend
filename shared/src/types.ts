@@ -10,6 +10,7 @@ export interface Tool {
 export interface Container {
   id: string;
   toolId: string;
+  titel?: string;
   x: number;
   y: number;
   breite: number;

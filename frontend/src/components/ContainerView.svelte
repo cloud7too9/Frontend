@@ -10,6 +10,7 @@
   export let tools: Tool[];
   export let metrics: GridMetrics;
   export let editor: boolean;
+  export let selected: boolean = false;
 
   $: box = cellToPixel(container.x, container.y, container.breite, container.hoehe, metrics);
   $: tool = resolveTool(tools, container.toolId);
@@ -19,9 +20,17 @@
   let dragAccX = 0;
   let dragAccY = 0;
 
+  function onContainerClick(e: MouseEvent) {
+    if (!editor) return;
+    e.stopPropagation();
+    workspaceStore.selectContainer(container.id);
+  }
+
   function startMove(e: PointerEvent) {
     if (!editor) return;
     e.preventDefault();
+    e.stopPropagation();
+    workspaceStore.selectContainer(container.id);
     const target = e.currentTarget as HTMLElement;
     target.setPointerCapture(e.pointerId);
     dragStartX = e.clientX;
@@ -59,6 +68,7 @@
     if (!editor) return;
     e.preventDefault();
     e.stopPropagation();
+    workspaceStore.selectContainer(container.id);
     const target = e.currentTarget as HTMLElement;
     target.setPointerCapture(e.pointerId);
     resizeStartX = e.clientX;
@@ -91,7 +101,10 @@
 <div
   class="container-view"
   class:editing={editor}
+  class:selected
   style="left: {box.left}px; top: {box.top}px; width: {box.width}px; height: {box.height}px;"
+  on:click={onContainerClick}
+  role="presentation"
 >
   <div class="container-header">
     {#if editor}
@@ -106,7 +119,7 @@
         on:pointercancel={endMove}
       >&#x2630;</span>
     {/if}
-    <span>{tool?.name ?? container.toolId}</span>
+    <span class="title">{container.titel ?? tool?.name ?? container.toolId}</span>
     <span class="status">{container.breite}&times;{container.hoehe}</span>
   </div>
   <div class="container-body">

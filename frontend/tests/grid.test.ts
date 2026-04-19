@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Container, Workspace } from "@mainhub/shared";
 import {
+  canPlace,
   cellToPixel,
   clampPosition,
   clampSize,
+  computeMove,
+  computeResize,
   findFreeSpot,
   gridHeightRows,
   metricsFor,
@@ -83,5 +86,50 @@ describe("grid math", () => {
     expect(
       gridHeightRows([{ id: "a", toolId: "t", x: 0, y: 5, breite: 2, hoehe: 3 }])
     ).toBe(9);
+  });
+
+  it("canPlace lehnt Ueberlappung ab und akzeptiert freie Position", () => {
+    const bestand: Container[] = [
+      { id: "a", toolId: "t", x: 0, y: 0, breite: 2, hoehe: 2 },
+    ];
+    const belegt: Container = { id: "b", toolId: "t", x: 1, y: 0, breite: 2, hoehe: 2 };
+    const frei: Container = { id: "b", toolId: "t", x: 2, y: 0, breite: 2, hoehe: 2 };
+    expect(canPlace(belegt, bestand, 12)).toBe(false);
+    expect(canPlace(frei, bestand, 12)).toBe(true);
+  });
+
+  it("canPlace lehnt Grid-Ueberschreitung ab", () => {
+    const c: Container = { id: "a", toolId: "t", x: 10, y: 0, breite: 4, hoehe: 1 };
+    expect(canPlace(c, [], 12)).toBe(false);
+  });
+
+  it("canPlace ignoriert Container mit gleicher Id (sich selbst)", () => {
+    const bestand: Container[] = [
+      { id: "a", toolId: "t", x: 0, y: 0, breite: 2, hoehe: 2 },
+    ];
+    const verschoben: Container = { id: "a", toolId: "t", x: 1, y: 0, breite: 2, hoehe: 2 };
+    expect(canPlace(verschoben, bestand, 12)).toBe(true);
+  });
+
+  it("computeMove blockiert bei belegtem Nachbarn", () => {
+    const c: Container = { id: "a", toolId: "t", x: 0, y: 0, breite: 2, hoehe: 2 };
+    const others: Container[] = [
+      { id: "b", toolId: "t", x: 2, y: 0, breite: 2, hoehe: 2 },
+    ];
+    expect(computeMove(c, 1, 0, 12, others)).toBeNull();
+    const ok = computeMove(c, 0, 2, 12, others);
+    expect(ok).not.toBeNull();
+    expect(ok!.x).toBe(0);
+    expect(ok!.y).toBe(2);
+  });
+
+  it("computeResize blockiert bei Ueberlappung und erzwingt Min 1x1", () => {
+    const c: Container = { id: "a", toolId: "t", x: 0, y: 0, breite: 2, hoehe: 2 };
+    const others: Container[] = [
+      { id: "b", toolId: "t", x: 2, y: 0, breite: 2, hoehe: 2 },
+    ];
+    expect(computeResize(c, 1, 0, 12, others)).toBeNull();
+    expect(computeResize(c, -1, 0, 12, [])).toMatchObject({ breite: 1, hoehe: 2 });
+    expect(computeResize(c, -5, -5, 12, [])).toBeNull();
   });
 });

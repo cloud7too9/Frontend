@@ -2,11 +2,13 @@
   import { onMount } from "svelte";
   import type { Tool, Workspace } from "@mainhub/shared";
   import { metricsFor, gridHeightRows, GAP_PX } from "../lib/grid.js";
+  import { workspaceStore } from "../lib/workspace.store.js";
   import ContainerView from "./ContainerView.svelte";
 
   export let workspace: Workspace;
   export let tools: Tool[];
   export let editor: boolean;
+  export let selectedContainerId: string | null;
 
   let gridEl: HTMLDivElement | undefined;
   let widthPx = 800;
@@ -26,14 +28,28 @@
   $: metrics = metricsFor(workspace, widthPx);
   $: rows = gridHeightRows(workspace.container);
   $: heightPx = rows * metrics.zeilenHoehe + (rows + 1) * metrics.gap;
+
+  function onBackgroundClick(e: MouseEvent) {
+    if (e.target === e.currentTarget) {
+      workspaceStore.clearSelection();
+    }
+  }
 </script>
 
 <div
   class="grid"
   bind:this={gridEl}
   style="height: {heightPx}px; padding-bottom: {GAP_PX}px;"
+  on:click={onBackgroundClick}
+  role="presentation"
 >
   {#each workspace.container as c (c.id)}
-    <ContainerView container={c} {tools} {metrics} {editor} />
+    <ContainerView
+      container={c}
+      {tools}
+      {metrics}
+      {editor}
+      selected={editor && c.id === selectedContainerId}
+    />
   {/each}
 </div>
