@@ -1,13 +1,13 @@
-node_modules
-dist
-dist-ssr
-coverage
-*.local
-*.tsbuildinfo
-.DS_Store
-.vscode/*
-!.vscode/extensions.json
-.idea
+node_modules/
+dist/
 *.log
-.env
-.env.local
+.DS_Store
+
+# TypeScript incremental / emit artifacts
+*.tsbuildinfo
+shared/src/*.js
+shared/src/*.d.ts
+backend/src/**/*.js
+backend/src/**/*.d.ts
+backend/tests/**/*.js
+backend/tests/**/*.d.ts
