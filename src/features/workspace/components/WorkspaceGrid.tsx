@@ -6,7 +6,7 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { useWorkspaceStore } from "../model/workspace.store";
+import { selectActiveLayout, useWorkspaceStore } from "../model/workspace.store";
 import {
   cellToPixel,
   columnWidth,
@@ -45,7 +45,7 @@ type DragState =
     };
 
 export function WorkspaceGrid() {
-  const layout = useWorkspaceStore((s) => s.layout);
+  const layout = useWorkspaceStore(selectActiveLayout);
   const editMode = useWorkspaceStore((s) => s.editMode);
   const selectedPanelId = useWorkspaceStore((s) => s.selectedPanelId);
   const selectPanel = useWorkspaceStore((s) => s.selectPanel);

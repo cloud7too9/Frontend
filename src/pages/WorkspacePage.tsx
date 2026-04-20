@@ -5,11 +5,11 @@ import { AddPanelModal } from "../features/workspace/components/AddPanelModal";
 import { useWorkspaceStore } from "../features/workspace/model/workspace.store";
 
 export function WorkspacePage() {
-  const loadLayout = useWorkspaceStore((s) => s.loadLayout);
+  const loadWorkspaces = useWorkspaceStore((s) => s.loadWorkspaces);
 
   useEffect(() => {
-    loadLayout();
-  }, [loadLayout]);
+    loadWorkspaces();
+  }, [loadWorkspaces]);
 
   return (
     <div className="flex min-h-screen flex-col bg-surface text-text">
