@@ -32,13 +32,16 @@ function markDirty<S extends WorkspaceState>(s: S): S {
   return { ...s, saveState: "ungespeichert", errorMessage: null };
 }
 
-function mutateContainers(fn: (container: Container[], workspace: Workspace) => Container[]): void {
+function mutateContainers(fn: (container: Container[], workspace: Workspace) => Container[]): boolean {
+  let applied = false;
   state.update((s) => {
     if (!s.workspace) return s;
     const next = fn(s.workspace.container, s.workspace);
     if (next === s.workspace.container) return s;
+    applied = true;
     return markDirty({ ...s, workspace: { ...s.workspace, container: next } });
   });
+  return applied;
 }
 
 export const workspaceStore = {
@@ -94,9 +97,9 @@ export const workspaceStore = {
     state.update((s) => (s.selectedContainerId === null ? s : { ...s, selectedContainerId: null }));
   },
 
-  moveContainer(id: string, dxCells: number, dyCells: number): void {
-    if (dxCells === 0 && dyCells === 0) return;
-    mutateContainers((container, workspace) => {
+  moveContainer(id: string, dxCells: number, dyCells: number): boolean {
+    if (dxCells === 0 && dyCells === 0) return false;
+    return mutateContainers((container, workspace) => {
       const current = container.find((c) => c.id === id);
       if (!current) return container;
       const others = container.filter((c) => c.id !== id);
@@ -106,9 +109,9 @@ export const workspaceStore = {
     });
   },
 
-  resizeContainer(id: string, dwCells: number, dhCells: number): void {
-    if (dwCells === 0 && dhCells === 0) return;
-    mutateContainers((container, workspace) => {
+  resizeContainer(id: string, dwCells: number, dhCells: number): boolean {
+    if (dwCells === 0 && dhCells === 0) return false;
+    return mutateContainers((container, workspace) => {
       const current = container.find((c) => c.id === id);
       if (!current) return container;
       const others = container.filter((c) => c.id !== id);

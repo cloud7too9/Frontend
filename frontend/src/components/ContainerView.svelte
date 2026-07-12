@@ -46,9 +46,10 @@
     const dy = e.clientY - dragStartY - dragAccY * (metrics.zeilenHoehe + metrics.gap);
     const { dxCells, dyCells } = pixelDeltaToCells(dx, dy, metrics);
     if (dxCells !== 0 || dyCells !== 0) {
-      workspaceStore.moveContainer(container.id, dxCells, dyCells);
-      dragAccX += dxCells;
-      dragAccY += dyCells;
+      if (workspaceStore.moveContainer(container.id, dxCells, dyCells)) {
+        dragAccX += dxCells;
+        dragAccY += dyCells;
+      }
     }
   }
 
@@ -84,9 +85,10 @@
     const dy = e.clientY - resizeStartY - resizeAccH * (metrics.zeilenHoehe + metrics.gap);
     const { dxCells, dyCells } = pixelDeltaToCells(dx, dy, metrics);
     if (dxCells !== 0 || dyCells !== 0) {
-      workspaceStore.resizeContainer(container.id, dxCells, dyCells);
-      resizeAccW += dxCells;
-      resizeAccH += dyCells;
+      if (workspaceStore.resizeContainer(container.id, dxCells, dyCells)) {
+        resizeAccW += dxCells;
+        resizeAccH += dyCells;
+      }
     }
   }
 

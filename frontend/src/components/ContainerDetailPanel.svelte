@@ -6,7 +6,6 @@
   export let tools: Tool[];
 
   let titelDraft = container.titel ?? "";
-  $: if (container.id) titelDraft = container.titel ?? "";
 
   function commitTitle() {
     workspaceStore.renameContainer(container.id, titelDraft);

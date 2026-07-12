@@ -36,10 +36,12 @@
       selectedContainerId={$workspaceStore.selectedContainerId}
     />
     {#if showSidebar && selectedContainer}
-      <ContainerDetailPanel
-        container={selectedContainer}
-        tools={$workspaceStore.tools}
-      />
+      {#key selectedContainer.id}
+        <ContainerDetailPanel
+          container={selectedContainer}
+          tools={$workspaceStore.tools}
+        />
+      {/key}
     {/if}
   </main>
 {/if}

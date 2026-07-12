@@ -101,6 +101,17 @@ describe("workspaceStore", () => {
     expect(get(workspaceStore).workspace!.container.find((c) => c.id === b.id)).toMatchObject({ x: b.x, y: b.y });
   });
 
+  it("moveContainer liefert true bei Erfolg und false bei Blockade", () => {
+    workspaceStore.addContainer("tool-a");
+    workspaceStore.addContainer("tool-b");
+    const [a] = get(workspaceStore).workspace!.container;
+    expect(workspaceStore.moveContainer(a.id, 0, 2)).toBe(true);
+    expect(workspaceStore.moveContainer(a.id, 0, 0)).toBe(false);
+    expect(workspaceStore.moveContainer(a.id, -99, 0)).toBe(false);
+    const b = get(workspaceStore).workspace!.container.find((c) => c.id !== a.id)!;
+    expect(workspaceStore.moveContainer(b.id, -2, 2)).toBe(false);
+  });
+
   it("resizeContainer blockiert bei Ueberlappung und bei ungueltiger Groesse", () => {
     workspaceStore.addContainer("tool-a");
     workspaceStore.addContainer("tool-b");
@@ -109,6 +120,16 @@ describe("workspaceStore", () => {
     expect(get(workspaceStore).workspace!.container[0]).toMatchObject({ breite: 2, hoehe: 2 });
     workspaceStore.resizeContainer(a.id, -5, -5);
     expect(get(workspaceStore).workspace!.container[0]).toMatchObject({ breite: 2, hoehe: 2 });
+  });
+
+  it("resizeContainer liefert true bei Erfolg und false bei Blockade", () => {
+    workspaceStore.addContainer("tool-a");
+    workspaceStore.addContainer("tool-b");
+    const [a] = get(workspaceStore).workspace!.container;
+    expect(workspaceStore.resizeContainer(a.id, 0, 1)).toBe(true);
+    expect(workspaceStore.resizeContainer(a.id, 0, 0)).toBe(false);
+    expect(workspaceStore.resizeContainer(a.id, 1, 0)).toBe(false);
+    expect(workspaceStore.resizeContainer(a.id, -5, -5)).toBe(false);
   });
 
   it("selectContainer nur im Editor-Modus, clearSelection leert", () => {
